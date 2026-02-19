@@ -1,3 +1,9 @@
+## 0.5.0
+
+Bump plus packages to latest major versions (connectivity_plus 7.x, device_info_plus 12.x, package_info_plus 9.x, battery_plus 7.x).
+Update Android toolchain (AGP 8.12.1, Gradle 8.13, Kotlin 2.2.0).
+Tighten SDK constraint to >=3.7.0.
+
 ## 0.4.0
 
 Updated dependencies and gradle version.
