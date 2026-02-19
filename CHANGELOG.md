@@ -1,8 +1,10 @@
 ## 0.5.0
 
-Bump plus packages to latest major versions (connectivity_plus 7.x, device_info_plus 12.x, package_info_plus 9.x, battery_plus 7.x).
+**BREAKING:** Minimum Dart SDK raised from 2.12.0 to 3.7.0. This is required by the
+updated plus packages (connectivity_plus 7.x, device_info_plus 12.x, package_info_plus 9.x,
+battery_plus 7.x), which all require Dart >=3.7.0.
+
 Update Android toolchain (AGP 8.12.1, Gradle 8.13, Kotlin 2.2.0).
-Tighten SDK constraint to >=3.7.0.
 
 ## 0.4.0
 

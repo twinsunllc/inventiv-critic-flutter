@@ -13,3 +13,4 @@ example/.flutter-plugins-dependencies
 .fvm/
 .flutter-plugins-dependencies
 .idea/
+**/ephemeral/
