@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly at 1 AM Central (6 AM UTC)
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Dart Analyze
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938bc4e4568a78e8edb56ab1f597e58b4cc65cb  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart analyze --fatal-infos
+
+  test:
+    name: Flutter Test
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938bc4e4568a78e8edb56ab1f597e58b4cc65cb  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter test
+
+  # --- Nightly security jobs ---
+
+  package-age-check:
+    name: Pub.dev Package Age Check
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - name: Check dependency publication dates
+        shell: bash
+        run: |
+          set -euo pipefail
+          QUARANTINE_DAYS=7
+          NOW=$(date +%s)
+          FAILED=0
+
+          # Extract dependencies from pubspec.yaml dependencies section
+          DEPS=$(awk '/^dependencies:/{found=1; next} /^[^ ]/{found=0} found && /^  [a-z]/' pubspec.yaml \
+            | grep -v '^\s*#' \
+            | sed 's/:.*//' \
+            | xargs)
+          # Remove flutter SDK dependency
+          DEPS=$(echo "$DEPS" | tr ' ' '\n' | grep -v '^flutter$' | tr '\n' ' ')
+
+          for PKG in $DEPS; do
+            echo "Checking $PKG..."
+            RESPONSE=$(curl -sf "https://pub.dev/api/packages/$PKG" 2>/dev/null || true)
+            if [ -z "$RESPONSE" ]; then
+              echo "  ⚠ Could not fetch info for $PKG (may be a first-party/private package)"
+              continue
+            fi
+
+            PUBLISHED=$(echo "$RESPONSE" | jq -r '.latest.published // empty')
+            if [ -z "$PUBLISHED" ]; then
+              echo "  ⚠ No publish date found for $PKG"
+              continue
+            fi
+
+            PUB_EPOCH=$(date -d "$PUBLISHED" +%s 2>/dev/null || echo 0)
+            if [ "$PUB_EPOCH" -eq 0 ]; then
+              echo "  ⚠ Could not parse date for $PKG: $PUBLISHED"
+              continue
+            fi
+
+            AGE_DAYS=$(( (NOW - PUB_EPOCH) / 86400 ))
+            if [ "$AGE_DAYS" -lt "$QUARANTINE_DAYS" ]; then
+              echo "  ✗ FAIL: $PKG latest version published $AGE_DAYS days ago (< $QUARANTINE_DAYS day quarantine) — published $PUBLISHED"
+              FAILED=1
+            else
+              echo "  ✓ OK: $PKG latest version published $AGE_DAYS days ago"
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "::error::One or more dependencies were published within the last $QUARANTINE_DAYS days. See above for details."
+            exit 1
+          fi
+
+          echo ""
+          echo "All dependencies pass the $QUARANTINE_DAYS-day quarantine check."
+
+  actions-security:
+    name: GitHub Actions Security Check
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - name: Run GitHub Actions security audit
+        uses: twinsunllc/github-actions-security-checker@3431967fb16dd3d0e96fcf823ba33609c2df31ee  # v1.4.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowlist: |
+            twinsunllc
+      - name: Upload audit report
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        if: always()
+        with:
+          name: action-security-report
+          path: action-security-report.md
+          retention-days: 30
