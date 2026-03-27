@@ -1,3 +1,16 @@
+## 1.0.0
+
+**BREAKING:** Migrate from v2 to v3 API.
+
+- Change API base URL from `/api/v2` to `/api/v3`
+- `AppInstall.id` is now a `String` (UUID) instead of `int`
+- `BugReport` now includes `id`, `device`, `app`, and `appVersion` fields from v3 response
+- Add `AppVersion` model for v3 nested app version data
+- `Attachment.fromJson` now reads `url` field (was `file_url` in v2)
+- `Critic.initialize()` accepts an optional `baseUrl` parameter for custom API endpoints
+- Update repository URL from `critic_flutter` to `inventiv-critic-flutter`
+- Update README title to match new repo name
+
 ## 0.5.0
 
 **BREAKING:** Minimum Dart SDK raised from 2.12.0 to 3.7.0. This is required by the
