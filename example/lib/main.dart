@@ -24,15 +24,18 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _submitReport(BuildContext context, {bool withFile = false}) async {
-    BugReport report =
-        BugReport.create(description: _descriptionController.text, stepsToReproduce: _reproduceController.text);
+    BugReport report = BugReport.create(
+        description: _descriptionController.text,
+        stepsToReproduce: _reproduceController.text);
 
     if (withFile) {
       report.attachments = <Attachment>[];
       Directory dir = await getApplicationDocumentsDirectory();
       File file = File('${dir.path}/test.txt');
-      File writtenFile = await file.writeAsString('Test file upload', mode: FileMode.write);
-      report.attachments?.add(Attachment(name: 'test file', path: writtenFile.path));
+      File writtenFile =
+          await file.writeAsString('Test file upload', mode: FileMode.write);
+      report.attachments
+          ?.add(Attachment(name: 'test file', path: writtenFile.path));
     }
 
     Critic().submitReport(report).then((BugReport successfulReport) {
