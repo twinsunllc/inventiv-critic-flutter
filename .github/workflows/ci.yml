@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Nightly at 1 AM Central (6 AM UTC)
+    # Nightly at 1:00 AM Central (6:00 AM UTC)
     - cron: "0 6 * * *"
   workflow_dispatch:
 
