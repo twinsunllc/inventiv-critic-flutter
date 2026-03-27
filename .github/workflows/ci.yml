@@ -46,6 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938bc4e4568a78e8edb56ab1f597e58b4cc65cb  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
       - name: Check dependency publication dates
         shell: bash
         run: |
@@ -54,40 +58,44 @@ jobs:
           NOW=$(date +%s)
           FAILED=0
 
-          # Extract dependencies from pubspec.yaml dependencies section
-          DEPS=$(awk '/^dependencies:/{found=1; next} /^[^ ]/{found=0} found && /^  [a-z]/' pubspec.yaml \
-            | grep -v '^\s*#' \
-            | sed 's/:.*//' \
-            | xargs)
-          # Remove flutter SDK dependency
-          DEPS=$(echo "$DEPS" | tr ' ' '\n' | grep -v '^flutter$' | tr '\n' ' ')
+          # Extract resolved package names and versions from pubspec.lock
+          # pubspec.lock YAML format: "  <pkg>:\n    ...\n    version: \"<ver>\""
+          DEPS=$(awk '
+            /^  [a-z]/ { pkg = $1; sub(/:$/, "", pkg) }
+            /^    version:/ { ver = $2; gsub(/"/, "", ver); print pkg ":" ver }
+          ' pubspec.lock)
 
-          for PKG in $DEPS; do
-            echo "Checking $PKG..."
+          for ENTRY in $DEPS; do
+            PKG=$(echo "$ENTRY" | cut -d: -f1)
+            VER=$(echo "$ENTRY" | cut -d: -f2)
+            echo "Checking $PKG@$VER..."
+
             RESPONSE=$(curl -sf "https://pub.dev/api/packages/$PKG" 2>/dev/null || true)
             if [ -z "$RESPONSE" ]; then
-              echo "  ⚠ Could not fetch info for $PKG (may be a first-party/private package)"
+              echo "  ⚠ Could not fetch info for $PKG (may be a first-party/SDK package)"
               continue
             fi
 
-            PUBLISHED=$(echo "$RESPONSE" | jq -r '.latest.published // empty')
+            # Find the published timestamp for the resolved version
+            PUBLISHED=$(echo "$RESPONSE" | jq -r --arg v "$VER" '
+              .versions[] | select(.version == $v) | .published // empty')
             if [ -z "$PUBLISHED" ]; then
-              echo "  ⚠ No publish date found for $PKG"
+              echo "  ⚠ No publish date found for $PKG@$VER"
               continue
             fi
 
             PUB_EPOCH=$(date -d "$PUBLISHED" +%s 2>/dev/null || echo 0)
             if [ "$PUB_EPOCH" -eq 0 ]; then
-              echo "  ⚠ Could not parse date for $PKG: $PUBLISHED"
+              echo "  ⚠ Could not parse date for $PKG@$VER: $PUBLISHED"
               continue
             fi
 
             AGE_DAYS=$(( (NOW - PUB_EPOCH) / 86400 ))
             if [ "$AGE_DAYS" -lt "$QUARANTINE_DAYS" ]; then
-              echo "  ✗ FAIL: $PKG latest version published $AGE_DAYS days ago (< $QUARANTINE_DAYS day quarantine) — published $PUBLISHED"
+              echo "  ✗ FAIL: $PKG@$VER published $AGE_DAYS days ago (< $QUARANTINE_DAYS day quarantine) — published $PUBLISHED"
               FAILED=1
             else
-              echo "  ✓ OK: $PKG latest version published $AGE_DAYS days ago"
+              echo "  ✓ OK: $PKG@$VER published $AGE_DAYS days ago"
             fi
           done
 
