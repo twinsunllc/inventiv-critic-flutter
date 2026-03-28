@@ -1,28 +1,42 @@
-## 1.1.0
-
-**BREAKING:** Directory rename and code quality cleanup.
-
-- Rename `lib/modal/` to `lib/model/` (fix longstanding typo)
-- Rename `ping_request_modal.dart` to `ping_request.dart`
-- Rename `report_request_modal.dart` to `report_request.dart`
-- Add `lib/inventiv_critic_flutter.dart` barrel exports file for a single clean import path
-- Replace `@required` annotations with `required` keyword
-- Remove `new` keyword usage per Dart style guide
-- Replace `Completer`/`.then()` pattern in `Api.submitReport` with `async`/`await`
-- Fix `Connectivity().checkConnectivity()` to handle `List<ConnectivityResult>` return type (connectivity_plus 7.x)
-
 ## 1.0.0
 
-**BREAKING:** Migrate from v2 to v3 API.
+First stable release with v3 API support, full test coverage, and modernized example app.
 
-- Change API base URL from `/api/v2` to `/api/v3`
+### API Changes (BREAKING)
+- Migrate from v2 to v3 API (base URL `/api/v2` → `/api/v3`)
 - `AppInstall.id` is now a `String` (UUID) instead of `int`
 - `BugReport` now includes `id`, `device`, `app`, and `appVersion` fields from v3 response
 - Add `AppVersion` model for v3 nested app version data
 - `Attachment.fromJson` now reads `url` field (was `file_url` in v2)
 - `Critic.initialize()` accepts an optional `baseUrl` parameter for custom API endpoints
-- Update repository URL from `critic_flutter` to `inventiv-critic-flutter`
-- Update README title to match new repo name
+
+### Code Quality
+- Rename `lib/modal/` to `lib/model/` (fix longstanding typo)
+- Add `lib/inventiv_critic_flutter.dart` barrel exports file for a single clean import path
+- Replace `@required` annotations with `required` keyword
+- Remove `new` keyword usage per Dart style guide
+- Replace `Completer`/`.then()` pattern in `Api.submitReport` with `async`/`await`
+- Fix `Connectivity().checkConnectivity()` to handle `List<ConnectivityResult>` return type
+- Add injectable HTTP client and device status provider for testability
+- Add proper error handling for `submitReport` non-success responses
+
+### Tests
+- Add unit tests for model serialization (UUID string handling, int→String migration)
+- Add unit tests for API request construction (PingRequest JSON, BugReportRequest fields)
+- Add mock HTTP tests for ping and submitReport endpoints
+- Add error handling tests (400, 401, 422, 500 responses, network errors)
+
+### Example App
+- Modernize example with Material 3 design
+- Add initialization status indicator
+- Add user identifier field
+- Add proper loading and error states
+- Update SDK constraints to >=3.7.0
+
+### Infrastructure
+- Add GitHub Actions CI workflow (flutter analyze + flutter test on PR/push)
+- Add nightly security CI (package age check, actions security audit)
+- Update repository URL to `inventiv-critic-flutter`
 
 ## 0.5.0
 

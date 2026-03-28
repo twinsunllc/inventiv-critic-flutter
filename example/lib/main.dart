@@ -1,92 +1,223 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
 import 'package:inventiv_critic_flutter/critic.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:path_provider/path_provider.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(const CriticExampleApp());
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  TextEditingController _descriptionController = TextEditingController(),
-      _reproduceController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    Critic().initialize('gJ44GxttrahyVBFs4k3jb8T1');
-  }
-
-  void _submitReport(BuildContext context, {bool withFile = false}) async {
-    BugReport report = BugReport.create(
-        description: _descriptionController.text,
-        stepsToReproduce: _reproduceController.text);
-
-    if (withFile) {
-      report.attachments = <Attachment>[];
-      Directory dir = await getApplicationDocumentsDirectory();
-      File file = File('${dir.path}/test.txt');
-      File writtenFile =
-          await file.writeAsString('Test file upload', mode: FileMode.write);
-      report.attachments
-          ?.add(Attachment(name: 'test file', path: writtenFile.path));
-    }
-
-    Critic().submitReport(report).then((BugReport successfulReport) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Bug Report has been filed, check console'),
-      ));
-      print(
-          'Successfully logged!\ndescription: ${successfulReport.description}\nsteps to reproduce: ${successfulReport.stepsToReproduce}');
-    }).catchError((Object error) {
-      print(error.toString());
-    });
-  }
+class CriticExampleApp extends StatelessWidget {
+  const CriticExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(25.0),
-          child: Builder(
-            builder: (context) => Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                Text('Enter a description'),
-                TextField(
-                  controller: _descriptionController,
+      title: 'Critic Example',
+      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      home: const CriticExamplePage(),
+    );
+  }
+}
+
+class CriticExamplePage extends StatefulWidget {
+  const CriticExamplePage({super.key});
+
+  @override
+  State<CriticExamplePage> createState() => _CriticExamplePageState();
+}
+
+class _CriticExamplePageState extends State<CriticExamplePage> {
+  final _descriptionController = TextEditingController();
+  final _stepsController = TextEditingController();
+  final _userIdController = TextEditingController();
+
+  bool _initialized = false;
+  bool _initializing = false;
+  bool _submitting = false;
+  String? _statusMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCritic();
+  }
+
+  Future<void> _initializeCritic() async {
+    setState(() => _initializing = true);
+    try {
+      await Critic().initialize('YOUR_API_TOKEN_HERE');
+      setState(() {
+        _initialized = true;
+        _statusMessage = 'Critic initialized successfully';
+      });
+    } catch (e) {
+      setState(() {
+        _statusMessage = 'Initialization failed: $e';
+      });
+    } finally {
+      setState(() => _initializing = false);
+    }
+  }
+
+  Future<void> _submitReport({bool withAttachment = false}) async {
+    if (!_initialized) {
+      _showSnackBar('Critic not initialized yet');
+      return;
+    }
+
+    if (_descriptionController.text.isEmpty) {
+      _showSnackBar('Please enter a description');
+      return;
+    }
+
+    setState(() => _submitting = true);
+
+    final report = BugReport.create(
+      description: _descriptionController.text,
+      stepsToReproduce:
+          _stepsController.text.isNotEmpty
+              ? _stepsController.text
+              : 'No steps provided',
+      userIdentifier:
+          _userIdController.text.isNotEmpty ? _userIdController.text : null,
+    );
+
+    if (withAttachment) {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/sample_attachment.txt');
+      await file.writeAsString(
+        'Sample attachment created at ${DateTime.now().toIso8601String()}',
+      );
+      report.attachments = [
+        Attachment(name: 'sample_attachment.txt', path: file.path),
+      ];
+    }
+
+    try {
+      final result = await Critic().submitReport(report);
+      _showSnackBar('Bug report submitted (ID: ${result.id})');
+      _descriptionController.clear();
+      _stepsController.clear();
+      _userIdController.clear();
+    } catch (e) {
+      _showSnackBar('Submission failed: $e');
+    } finally {
+      setState(() => _submitting = false);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _stepsController.dispose();
+    _userIdController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Critic Example')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      _initialized
+                          ? Icons.check_circle
+                          : _initializing
+                          ? Icons.hourglass_top
+                          : Icons.error,
+                      color:
+                          _initialized
+                              ? Colors.green
+                              : _initializing
+                              ? Colors.orange
+                              : Colors.red,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _statusMessage ?? 'Connecting to Critic...',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ],
                 ),
-                Text('Enter steps to reproduce'),
-                TextField(
-                  controller: _reproduceController,
-                ),
-                MaterialButton(
-                  color: Colors.grey,
-                  onPressed: () {
-                    _submitReport(context);
-                  },
-                  child: Text('Test Submit'),
-                ),
-                MaterialButton(
-                  color: Colors.grey,
-                  onPressed: () {
-                    _submitReport(context, withFile: true);
-                  },
-                  child: Text('Test Submit with file'),
-                ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
+            Text(
+              'Submit a Bug Report',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                hintText: 'Describe the bug...',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _stepsController,
+              decoration: const InputDecoration(
+                labelText: 'Steps to Reproduce',
+                hintText: '1. Open the app\n2. Tap on...\n3. Observe...',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _userIdController,
+              decoration: const InputDecoration(
+                labelText: 'User Identifier (optional)',
+                hintText: 'e.g. user@example.com',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed:
+                  _submitting || !_initialized ? null : () => _submitReport(),
+              icon:
+                  _submitting
+                      ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.send),
+              label: const Text('Submit Report'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed:
+                  _submitting || !_initialized
+                      ? null
+                      : () => _submitReport(withAttachment: true),
+              icon: const Icon(Icons.attach_file),
+              label: const Text('Submit with Attachment'),
+            ),
+          ],
         ),
       ),
     );
