@@ -16,6 +16,8 @@ dependencies:
   connectivity_plus: ^7.0.0
   mime: ^1.0.0
   battery_plus: ^7.0.0
+  disk_space_plus: ^0.2.6
+  system_info: ^1.0.1
 
 dev_dependencies:
   flutter_test:

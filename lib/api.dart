@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:disk_space_plus/disk_space_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:inventiv_critic_flutter/model/ping_request.dart';
 import 'package:inventiv_critic_flutter/model/ping_response.dart';
 import 'package:inventiv_critic_flutter/model/report_request.dart';
+import 'package:system_info/system_info.dart';
 
 const String _defaultApiUrl = 'https://critic.inventiv.io/api/v3';
 
@@ -84,6 +86,32 @@ class Api {
                 .toString(),
         'device_status[battery_level]': (await battery.batteryLevel).toString(),
       });
+    } catch (err) {
+      print(err);
+    }
+
+    try {
+      final diskSpacePlus = DiskSpacePlus();
+      final freeMb = await diskSpacePlus.getFreeDiskSpace;
+      final totalMb = await diskSpacePlus.getTotalDiskSpace;
+      if (freeMb != null) {
+        final freeBytes = (freeMb * 1024 * 1024).round();
+        returnVal['device_status[disk_free]'] = freeBytes.toString();
+        returnVal['device_status[disk_usable]'] = freeBytes.toString();
+      }
+      if (totalMb != null) {
+        returnVal['device_status[disk_total]'] =
+            (totalMb * 1024 * 1024).round().toString();
+      }
+    } catch (err) {
+      print(err);
+    }
+
+    try {
+      returnVal['device_status[memory_free]'] =
+          SysInfo.getFreePhysicalMemory().toString();
+      returnVal['device_status[memory_total]'] =
+          SysInfo.getTotalPhysicalMemory().toString();
     } catch (err) {
       print(err);
     }
