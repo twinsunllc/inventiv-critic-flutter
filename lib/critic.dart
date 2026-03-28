@@ -73,7 +73,7 @@ class Critic {
     );
   }
 
-  Future<bool> initialize(String apiToken, {String? baseUrl}) async {
+  Future<Zone> initialize(String apiToken, {String? baseUrl}) async {
     _apiToken = apiToken;
     if (baseUrl != null) {
       Api.setBaseUrl(baseUrl);
@@ -82,12 +82,10 @@ class Critic {
     }
 
     // Start log capture so print() and FlutterError output is buffered.
-    // The returned Zone must wrap the caller's app for print interception;
-    // however initialize() is typically called from within the app already,
-    // so we install here to at least capture FlutterError.onError. Callers
-    // who want full print() interception should use
-    // `Critic().logCapture.runZoned(() => runApp(...))`.
-    logCapture.install();
+    // The returned Zone must wrap the caller's app for print() interception.
+    // Use it directly: `zone.run(() => runApp(MyApp()))`, or use the
+    // convenience method [initializeAndRun] which does both in one call.
+    final zone = logCapture.install();
 
     App appData = await _createAppData();
     Device deviceData = await _createDeviceData();
@@ -98,7 +96,27 @@ class Critic {
       return Future<AppInstall>.error(false);
     });
     _appId = response.id;
-    return true;
+    return zone;
+  }
+
+  /// Initializes the SDK and runs [body] inside the log-capture zone so that
+  /// all `print()` calls are automatically captured.
+  ///
+  /// This is the recommended way to start Critic with full log capture:
+  ///
+  /// ```dart
+  /// void main() async {
+  ///   WidgetsFlutterBinding.ensureInitialized();
+  ///   await Critic().initializeAndRun('your-api-token', () => runApp(MyApp()));
+  /// }
+  /// ```
+  Future<void> initializeAndRun(
+    String apiToken,
+    void Function() body, {
+    String? baseUrl,
+  }) async {
+    final zone = await initialize(apiToken, baseUrl: baseUrl);
+    zone.run(body);
   }
 
   Future<BugReport> submitReport(BugReport report) async {
