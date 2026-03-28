@@ -67,12 +67,12 @@ class Critic {
     );
   }
 
-  Future<bool> initialize(String apiToken, {String? baseUrl}) async {
+  Future<bool> initialize(String apiToken, {String? host}) async {
     _apiToken = apiToken;
-    if (baseUrl != null) {
-      Api.setBaseUrl(baseUrl);
+    if (host != null) {
+      Api.setHost(host);
     } else {
-      Api.resetBaseUrl();
+      Api.resetHost();
     }
 
     App appData = await _createAppData();

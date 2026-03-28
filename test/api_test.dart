@@ -15,7 +15,7 @@ void main() {
   late PingRequest testPingRequest;
 
   setUp(() {
-    Api.resetBaseUrl();
+    Api.resetHost();
     Api.resetHttpClient();
     Api.setDeviceStatusProvider(
       () async => <String, String>{
@@ -45,7 +45,7 @@ void main() {
   });
 
   tearDown(() {
-    Api.resetBaseUrl();
+    Api.resetHost();
     Api.resetHttpClient();
     Api.resetDeviceStatusProvider();
   });
@@ -95,9 +95,9 @@ void main() {
     });
   });
 
-  group('Api.setBaseUrl / resetBaseUrl', () {
-    test('setBaseUrl changes the API URL used by ping', () async {
-      Api.setBaseUrl('https://custom.api.com/v3');
+  group('Api.setHost / resetHost', () {
+    test('setHost changes the API URL used by ping', () async {
+      Api.setHost('https://custom.api.com');
 
       Uri? capturedUri;
       final mockClient = MockClient((request) async {
@@ -112,12 +112,12 @@ void main() {
       Api.setHttpClient(mockClient);
 
       await Api.ping(testPingRequest);
-      expect(capturedUri.toString(), 'https://custom.api.com/v3/ping');
+      expect(capturedUri.toString(), 'https://custom.api.com/api/v3/ping');
     });
 
-    test('resetBaseUrl restores default URL', () async {
-      Api.setBaseUrl('https://custom.api.com/v3');
-      Api.resetBaseUrl();
+    test('resetHost restores default URL', () async {
+      Api.setHost('https://custom.api.com');
+      Api.resetHost();
 
       Uri? capturedUri;
       final mockClient = MockClient((request) async {

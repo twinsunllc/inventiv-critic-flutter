@@ -12,13 +12,13 @@ import 'package:path_provider/path_provider.dart';
 //   - iOS Simulator:     use 'http://localhost:8000/api/v3'
 //   - Android Emulator:  use 'http://10.0.2.2:8000/api/v3'
 //   - Physical device:   use your host machine's LAN IP, e.g.
-//                         'http://192.168.1.42:8000/api/v3'
-// For production, leave as null to use the default Critic URL.
+//                         'http://192.168.1.42:8000'
+// For production, leave as null to use the default Critic host.
 // ---------------------------------------------------------------------------
 const String apiToken = 'YOUR_API_TOKEN';
-// Set to your local server URL for development, e.g.:
-//   const String? baseUrl = 'http://localhost:8000/api/v3';
-const String? baseUrl = null;
+// Set to your local server host for development, e.g.:
+//   const String? host = 'http://localhost:8000';
+const String? host = null;
 
 void main() => runApp(const CriticExampleApp());
 
@@ -75,7 +75,7 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
       _statusMessage = null;
     });
     try {
-      await Critic().initialize(apiToken, baseUrl: baseUrl);
+      await Critic().initialize(apiToken, host: host);
       setState(() {
         _initialized = true;
         _statusMessage = 'Initialized and ping succeeded';
@@ -198,7 +198,7 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'API: ${baseUrl ?? "default (production)"}',
+                      'API: ${host ?? "default (production)"}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

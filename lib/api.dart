@@ -9,21 +9,24 @@ import 'package:inventiv_critic_flutter/model/ping_request.dart';
 import 'package:inventiv_critic_flutter/model/ping_response.dart';
 import 'package:inventiv_critic_flutter/model/report_request.dart';
 
-const String _defaultApiUrl = 'https://critic.inventiv.io/api/v3';
+const String _defaultHost = 'https://critic.inventiv.io';
+const String _apiPath = '/api/v3';
 
 typedef DeviceStatusProvider = Future<Map<String, String>> Function();
 
 class Api {
-  static String _apiUrl = _defaultApiUrl;
+  static String _host = _defaultHost;
   static http.Client? _httpClient;
   static DeviceStatusProvider? _deviceStatusProvider;
 
-  static void setBaseUrl(String url) {
-    _apiUrl = url;
+  static String get _apiUrl => '$_host$_apiPath';
+
+  static void setHost(String host) {
+    _host = host.replaceAll(RegExp(r'/+$'), '');
   }
 
-  static void resetBaseUrl() {
-    _apiUrl = _defaultApiUrl;
+  static void resetHost() {
+    _host = _defaultHost;
   }
 
   /// Sets a custom HTTP client (useful for testing).
