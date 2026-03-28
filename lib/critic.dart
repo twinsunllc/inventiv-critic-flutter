@@ -71,6 +71,8 @@ class Critic {
     _apiToken = apiToken;
     if (baseUrl != null) {
       Api.setBaseUrl(baseUrl);
+    } else {
+      Api.resetBaseUrl();
     }
 
     App appData = await _createAppData();
