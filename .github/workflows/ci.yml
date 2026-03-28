@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly at 1:00 AM Central (6:00 AM UTC)
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Dart Analyze
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart analyze --fatal-warnings
+
+  test:
+    name: Flutter Test
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - name: Run tests
+        run: |
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No test directory found — skipping tests"
+          fi
+
+  # --- Nightly security jobs ---
+
+  package-age-check:
+    name: Pub.dev Package Age Check
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - name: Check dependency publication dates
+        shell: bash
+        run: |
+          set -euo pipefail
+          QUARANTINE_DAYS=7
+          NOW=$(date +%s)
+          FAILED=0
+
+          # Extract resolved package names and versions from pubspec.lock
+          # pubspec.lock YAML format: "  <pkg>:\n    ...\n    version: \"<ver>\""
+          DEPS=$(awk '
+            /^  [a-z]/ { pkg = $1; sub(/:$/, "", pkg) }
+            /^    version:/ { ver = $2; gsub(/"/, "", ver); print pkg ":" ver }
+          ' pubspec.lock)
+
+          for ENTRY in $DEPS; do
+            PKG=$(echo "$ENTRY" | cut -d: -f1)
+            VER=$(echo "$ENTRY" | cut -d: -f2)
+            echo "Checking $PKG@$VER..."
+
+            RESPONSE=$(curl -sf "https://pub.dev/api/packages/$PKG" 2>/dev/null || true)
+            if [ -z "$RESPONSE" ]; then
+              echo "  ⚠ Could not fetch info for $PKG (may be a first-party/SDK package)"
+              continue
+            fi
+
+            # Find the published timestamp for the resolved version
+            PUBLISHED=$(echo "$RESPONSE" | jq -r --arg v "$VER" '
+              .versions[] | select(.version == $v) | .published // empty')
+            if [ -z "$PUBLISHED" ]; then
+              echo "  ⚠ No publish date found for $PKG@$VER"
+              continue
+            fi
+
+            PUB_EPOCH=$(date -d "$PUBLISHED" +%s 2>/dev/null || echo 0)
+            if [ "$PUB_EPOCH" -eq 0 ]; then
+              echo "  ⚠ Could not parse date for $PKG@$VER: $PUBLISHED"
+              continue
+            fi
+
+            AGE_DAYS=$(( (NOW - PUB_EPOCH) / 86400 ))
+            if [ "$AGE_DAYS" -lt "$QUARANTINE_DAYS" ]; then
+              echo "  ✗ FAIL: $PKG@$VER published $AGE_DAYS days ago (< $QUARANTINE_DAYS day quarantine) — published $PUBLISHED"
+              FAILED=1
+            else
+              echo "  ✓ OK: $PKG@$VER published $AGE_DAYS days ago"
+            fi
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "::error::One or more dependencies were published within the last $QUARANTINE_DAYS days. See above for details."
+            exit 1
+          fi
+
+          echo ""
+          echo "All dependencies pass the $QUARANTINE_DAYS-day quarantine check."
+
+  actions-security:
+    name: GitHub Actions Security Check
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - name: Run GitHub Actions security audit
+        uses: twinsunllc/github-actions-security-checker@3431967fb16dd3d0e96fcf823ba33609c2df31ee  # v1.4.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowlist: |
+            twinsunllc
+      - name: Upload audit report
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        if: always()
+        with:
+          name: action-security-report
+          path: action-security-report.md
+          retention-days: 30
