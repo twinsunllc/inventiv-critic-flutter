@@ -5,6 +5,19 @@ import 'package:inventiv_critic_flutter/critic.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:path_provider/path_provider.dart';
 
+// ---------------------------------------------------------------------------
+// Configuration — update these to point at your Critic instance.
+//
+// For local development:
+//   - iOS Simulator:     use 'http://localhost:8000/api/v3'
+//   - Android Emulator:  use 'http://10.0.2.2:8000/api/v3'
+//   - Physical device:   use your host machine's LAN IP, e.g.
+//                         'http://192.168.1.42:8000/api/v3'
+// For production, leave as null to use the default Critic URL.
+// ---------------------------------------------------------------------------
+const String apiToken = 'puZh4G2f1j9jwFSDrPus2ZtN';
+const String? baseUrl = 'http://localhost:8000/api/v3';
+
 void main() => runApp(const CriticExampleApp());
 
 class CriticExampleApp extends StatelessWidget {
@@ -44,12 +57,16 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
   }
 
   Future<void> _initializeCritic() async {
-    setState(() => _initializing = true);
+    setState(() {
+      _initializing = true;
+      _initialized = false;
+      _statusMessage = null;
+    });
     try {
-      await Critic().initialize('YOUR_API_TOKEN_HERE');
+      await Critic().initialize(apiToken, baseUrl: baseUrl);
       setState(() {
         _initialized = true;
-        _statusMessage = 'Critic initialized successfully';
+        _statusMessage = 'Initialized and ping succeeded';
       });
     } catch (e) {
       setState(() {
@@ -134,27 +151,43 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      _initialized
-                          ? Icons.check_circle
-                          : _initializing
-                          ? Icons.hourglass_top
-                          : Icons.error,
-                      color:
+                    Row(
+                      children: [
+                        Icon(
                           _initialized
-                              ? Colors.green
+                              ? Icons.check_circle
                               : _initializing
-                              ? Colors.orange
-                              : Colors.red,
+                              ? Icons.hourglass_top
+                              : Icons.error,
+                          color:
+                              _initialized
+                                  ? Colors.green
+                                  : _initializing
+                                  ? Colors.orange
+                                  : Colors.red,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _statusMessage ?? 'Connecting to Critic...',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (!_initializing && !_initialized)
+                          IconButton(
+                            onPressed: _initializeCritic,
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Retry',
+                          ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _statusMessage ?? 'Connecting to Critic...',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'API: ${baseUrl ?? "default (production)"}',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
