@@ -1,3 +1,16 @@
+## 1.1.0
+
+**BREAKING:** Directory rename and code quality cleanup.
+
+- Rename `lib/modal/` to `lib/model/` (fix longstanding typo)
+- Rename `ping_request_modal.dart` to `ping_request.dart`
+- Rename `report_request_modal.dart` to `report_request.dart`
+- Add `lib/inventiv_critic_flutter.dart` barrel exports file for a single clean import path
+- Replace `@required` annotations with `required` keyword
+- Remove `new` keyword usage per Dart style guide
+- Replace `Completer`/`.then()` pattern in `Api.submitReport` with `async`/`await`
+- Fix `Connectivity().checkConnectivity()` to handle `List<ConnectivityResult>` return type (connectivity_plus 7.x)
+
 ## 1.0.0
 
 **BREAKING:** Migrate from v2 to v3 API.

@@ -3,17 +3,17 @@ import 'dart:io';
 
 import 'package:inventiv_critic_flutter/api.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:inventiv_critic_flutter/modal/app.dart';
-import 'package:inventiv_critic_flutter/modal/bug_report.dart';
-import 'package:inventiv_critic_flutter/modal/device.dart';
-import 'package:inventiv_critic_flutter/modal/ping_request_modal.dart';
-import 'package:inventiv_critic_flutter/modal/ping_response.dart';
-import 'package:inventiv_critic_flutter/modal/report_request_modal.dart';
+import 'package:inventiv_critic_flutter/model/app.dart';
+import 'package:inventiv_critic_flutter/model/bug_report.dart';
+import 'package:inventiv_critic_flutter/model/device.dart';
+import 'package:inventiv_critic_flutter/model/ping_request.dart';
+import 'package:inventiv_critic_flutter/model/ping_response.dart';
+import 'package:inventiv_critic_flutter/model/report_request.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class Critic {
   //singleton set-up
-  static final Critic _singleton = new Critic._internal();
+  static final Critic _singleton = Critic._internal();
   Critic._internal();
 
   factory Critic() {
@@ -80,7 +80,7 @@ class Critic {
     AppInstall response = await Api.ping(
       PingRequest(apiToken: _apiToken!, app: appData, device: deviceData),
     ).catchError((Object error) {
-      print('Ping to critic failed: ' + error.toString());
+      print('Ping to critic failed: $error');
       return Future<AppInstall>.error(false);
     });
     _appId = response.id;

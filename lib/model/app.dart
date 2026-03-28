@@ -16,7 +16,7 @@ class App {
     String? versionCode,
     String? versionName,
   }) {
-    _Version version = new _Version(code: versionCode, name: versionName);
+    _Version version = _Version(code: versionCode, name: versionName);
     return App(
       name: name,
       package: package,
