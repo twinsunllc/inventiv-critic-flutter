@@ -2,7 +2,12 @@ class App {
   String name, package, platform;
   _Version version;
 
-  App({required this.name, required this.package, required this.platform, required this.version});
+  App({
+    required this.name,
+    required this.package,
+    required this.platform,
+    required this.version,
+  });
 
   factory App.create({
     required String name,
@@ -12,7 +17,12 @@ class App {
     String? versionName,
   }) {
     _Version version = new _Version(code: versionCode, name: versionName);
-    return App(name: name, package: package, platform: platform, version: version);
+    return App(
+      name: name,
+      package: package,
+      platform: platform,
+      version: version,
+    );
   }
 
   factory App.fromJson(Map<String, dynamic> json) {
@@ -25,11 +35,11 @@ class App {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'name': name,
-        'package': package,
-        'platform': platform,
-        'version': version.toJson(),
-      };
+    'name': name,
+    'package': package,
+    'platform': platform,
+    'version': version.toJson(),
+  };
 }
 
 class _Version {
@@ -38,14 +48,11 @@ class _Version {
   _Version({this.code = 'unknown', this.name = 'unknown'});
 
   factory _Version.fromJson(Map<String, dynamic> json) {
-    return _Version(
-      code: json['code'],
-      name: json['name'],
-    );
+    return _Version(code: json['code'], name: json['name']);
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'code': code,
-        'name': name,
-      };
+    'code': code,
+    'name': name,
+  };
 }
