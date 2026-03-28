@@ -15,8 +15,10 @@ import 'package:path_provider/path_provider.dart';
 //                         'http://192.168.1.42:8000/api/v3'
 // For production, leave as null to use the default Critic URL.
 // ---------------------------------------------------------------------------
-const String apiToken = 'puZh4G2f1j9jwFSDrPus2ZtN';
-const String? baseUrl = 'http://localhost:8000/api/v3';
+const String apiToken = 'YOUR_API_TOKEN';
+// Set to your local server URL for development, e.g.:
+//   const String? baseUrl = 'http://localhost:8000/api/v3';
+const String? baseUrl = null;
 
 void main() => runApp(const CriticExampleApp());
 
@@ -57,6 +59,16 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
   }
 
   Future<void> _initializeCritic() async {
+    if (apiToken == 'YOUR_API_TOKEN') {
+      setState(() {
+        _initialized = false;
+        _initializing = false;
+        _statusMessage =
+            'API token not configured. Set your token in main.dart '
+            '(see the apiToken constant at the top of the file).';
+      });
+      return;
+    }
     setState(() {
       _initializing = true;
       _initialized = false;
