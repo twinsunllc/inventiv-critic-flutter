@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:inventiv_critic_flutter/api.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:inventiv_critic_flutter/log_buffer.dart';
+import 'package:inventiv_critic_flutter/log_capture.dart';
 import 'package:inventiv_critic_flutter/model/app.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:inventiv_critic_flutter/model/device.dart';
@@ -22,6 +24,10 @@ class Critic {
 
   String? _apiToken;
   String? _appId;
+
+  /// Log capture instance. Access the underlying [LogBuffer] via
+  /// `Critic().logCapture.buffer` if you need to add custom entries.
+  final LogCapture logCapture = LogCapture();
 
   Future<App> _createAppData() async {
     final PackageInfo info = await PackageInfo.fromPlatform();
@@ -75,6 +81,14 @@ class Critic {
       Api.resetBaseUrl();
     }
 
+    // Start log capture so print() and FlutterError output is buffered.
+    // The returned Zone must wrap the caller's app for print interception;
+    // however initialize() is typically called from within the app already,
+    // so we install here to at least capture FlutterError.onError. Callers
+    // who want full print() interception should use
+    // `Critic().logCapture.runZoned(() => runApp(...))`.
+    logCapture.install();
+
     App appData = await _createAppData();
     Device deviceData = await _createDeviceData();
     AppInstall response = await Api.ping(
@@ -101,6 +115,6 @@ class Critic {
       apiToken: _apiToken!,
       report: report,
     );
-    return await Api.submitReport(requestData);
+    return await Api.submitReport(requestData, logBuffer: logCapture.buffer);
   }
 }

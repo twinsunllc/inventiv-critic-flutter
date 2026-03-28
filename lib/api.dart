@@ -5,6 +5,7 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:disk_space_plus/disk_space_plus.dart';
 import 'package:http/http.dart' as http;
+import 'package:inventiv_critic_flutter/log_buffer.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:inventiv_critic_flutter/model/ping_request.dart';
 import 'package:inventiv_critic_flutter/model/ping_response.dart';
@@ -120,8 +121,9 @@ class Api {
   }
 
   static Future<BugReport> submitReport(
-    BugReportRequest submitReportRequest,
-  ) async {
+    BugReportRequest submitReportRequest, {
+    LogBuffer? logBuffer,
+  }) async {
     final uri = Uri.parse('$_apiUrl/bug_reports');
     final request =
         http.MultipartRequest('POST', uri)
@@ -151,6 +153,22 @@ class Api {
           }
         }),
       );
+    }
+
+    // Attach captured logs as a text file, if available.
+    if (logBuffer != null && !logBuffer.isEmpty) {
+      try {
+        final logContent = logBuffer.export();
+        request.files.add(
+          http.MultipartFile.fromString(
+            'bug_report[attachments][]',
+            logContent,
+            filename: 'console_log.txt',
+          ),
+        );
+      } catch (_) {
+        // Graceful failure — if log capture fails, the report still submits.
+      }
     }
 
     final streamedResponse = await _client.send(request);
