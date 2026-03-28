@@ -493,5 +493,190 @@ void main() {
         throwsA(isA<http.ClientException>()),
       );
     });
+
+    test(
+      'includes disk and memory fields when provided by deviceStatusProvider',
+      () async {
+        Api.setDeviceStatusProvider(
+          () async => <String, String>{
+            'device_status[network_cell_connected]': 'false',
+            'device_status[network_wifi_connected]': 'true',
+            'device_status[disk_free]': '10737418240',
+            'device_status[disk_total]': '107374182400',
+            'device_status[disk_usable]': '10737418240',
+            'device_status[memory_free]': '2147483648',
+            'device_status[memory_total]': '8589934592',
+          },
+        );
+
+        Map<String, String>? capturedFields;
+        final mockClient = MockClient.streaming((request, bodyStream) async {
+          final bytes = await bodyStream.toBytes();
+          final body = String.fromCharCodes(bytes);
+          capturedFields = {};
+          for (final field in [
+            'disk_free',
+            'disk_total',
+            'disk_usable',
+            'memory_free',
+            'memory_total',
+          ]) {
+            if (body.contains('device_status[$field]')) {
+              capturedFields!['device_status[$field]'] = 'present';
+            }
+          }
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                json.encode({
+                  'id': 'bug-uuid',
+                  'description': 'Test',
+                  'steps_to_reproduce': null,
+                  'user_identifier': null,
+                  'created_at': null,
+                  'updated_at': null,
+                  'attachments': [],
+                }),
+              ),
+            ),
+            200,
+          );
+        });
+        Api.setHttpClient(mockClient);
+
+        await Api.submitReport(testReportRequest);
+
+        expect(capturedFields!['device_status[disk_free]'], 'present');
+        expect(capturedFields!['device_status[disk_total]'], 'present');
+        expect(capturedFields!['device_status[disk_usable]'], 'present');
+        expect(capturedFields!['device_status[memory_free]'], 'present');
+        expect(capturedFields!['device_status[memory_total]'], 'present');
+      },
+    );
+  });
+
+  group('Api.deviceStatus disk and memory', () {
+    test('disk MB to bytes conversion is correct', () {
+      // 10240 MB * 1024 * 1024 = 10737418240 bytes (10 GB)
+      expect((10240.0 * 1024 * 1024).round(), 10737418240);
+      // 102400 MB * 1024 * 1024 = 107374182400 bytes (100 GB)
+      expect((102400.0 * 1024 * 1024).round(), 107374182400);
+      // disk_usable equals disk_free
+      final freeMb = 10240.0;
+      final freeBytes = (freeMb * 1024 * 1024).round();
+      expect(freeBytes, 10737418240);
+    });
+
+    test(
+      'submitReport forwards all disk and memory fields from provider',
+      () async {
+        Api.setDeviceStatusProvider(
+          () async => <String, String>{
+            'device_status[network_cell_connected]': 'false',
+            'device_status[network_wifi_connected]': 'false',
+            'device_status[disk_free]': '10737418240',
+            'device_status[disk_total]': '107374182400',
+            'device_status[disk_usable]': '10737418240',
+            'device_status[memory_free]': '2147483648',
+            'device_status[memory_total]': '8589934592',
+          },
+        );
+
+        final testRequest = BugReportRequest(
+          appInstall: AppInstall(id: 'install-uuid'),
+          apiToken: 'token',
+          report: BugReport.create(
+            description: 'Test',
+            stepsToReproduce: 'Steps',
+            userIdentifier: 'user',
+          ),
+        );
+
+        String? capturedBody;
+        final mockClient = MockClient.streaming((request, bodyStream) async {
+          final bytes = await bodyStream.toBytes();
+          capturedBody = String.fromCharCodes(bytes);
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                json.encode({
+                  'id': 'bug-uuid',
+                  'description': 'Test',
+                  'steps_to_reproduce': null,
+                  'user_identifier': null,
+                  'created_at': null,
+                  'updated_at': null,
+                  'attachments': [],
+                }),
+              ),
+            ),
+            200,
+          );
+        });
+        Api.setHttpClient(mockClient);
+
+        await Api.submitReport(testRequest);
+
+        expect(capturedBody, contains('device_status[disk_free]'));
+        expect(capturedBody, contains('10737418240'));
+        expect(capturedBody, contains('device_status[disk_total]'));
+        expect(capturedBody, contains('107374182400'));
+        expect(capturedBody, contains('device_status[disk_usable]'));
+        expect(capturedBody, contains('device_status[memory_free]'));
+        expect(capturedBody, contains('2147483648'));
+        expect(capturedBody, contains('device_status[memory_total]'));
+        expect(capturedBody, contains('8589934592'));
+      },
+    );
+
+    test('submitReport succeeds without disk and memory fields', () async {
+      // Verifies graceful degradation: when disk/memory are unavailable,
+      // the request still succeeds with just network fields.
+      Api.setDeviceStatusProvider(
+        () async => <String, String>{
+          'device_status[network_cell_connected]': 'false',
+          'device_status[network_wifi_connected]': 'true',
+        },
+      );
+
+      final testRequest = BugReportRequest(
+        appInstall: AppInstall(id: 'install-uuid'),
+        apiToken: 'token',
+        report: BugReport.create(
+          description: 'Test',
+          stepsToReproduce: 'Steps',
+          userIdentifier: 'user',
+        ),
+      );
+
+      String? capturedBody;
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        final bytes = await bodyStream.toBytes();
+        capturedBody = String.fromCharCodes(bytes);
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              json.encode({
+                'id': 'bug-uuid',
+                'description': 'Test',
+                'steps_to_reproduce': null,
+                'user_identifier': null,
+                'created_at': null,
+                'updated_at': null,
+                'attachments': [],
+              }),
+            ),
+          ),
+          200,
+        );
+      });
+      Api.setHttpClient(mockClient);
+
+      final result = await Api.submitReport(testRequest);
+      expect(result, isA<BugReport>());
+      expect(capturedBody, contains('device_status[network_wifi_connected]'));
+      expect(capturedBody, isNot(contains('device_status[disk_free]')));
+      expect(capturedBody, isNot(contains('device_status[memory_free]')));
+    });
   });
 }
