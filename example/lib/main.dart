@@ -9,8 +9,8 @@ import 'package:path_provider/path_provider.dart';
 // Configuration — update these to point at your Critic instance.
 //
 // For local development:
-//   - iOS Simulator:     use 'http://localhost:8000/api/v3'
-//   - Android Emulator:  use 'http://10.0.2.2:8000/api/v3'
+//   - iOS Simulator:     use 'http://localhost:8000'
+//   - Android Emulator:  use 'http://10.0.2.2:8000'
 //   - Physical device:   use your host machine's LAN IP, e.g.
 //                         'http://192.168.1.42:8000'
 // For production, leave as null to use the default Critic host.
