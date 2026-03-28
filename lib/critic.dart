@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:inventiv_critic_flutter/api.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:inventiv_critic_flutter/log_buffer.dart';
+import 'package:inventiv_critic_flutter/log_capture.dart';
 import 'package:inventiv_critic_flutter/model/app.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:inventiv_critic_flutter/model/device.dart';
@@ -22,6 +24,10 @@ class Critic {
 
   String? _apiToken;
   String? _appId;
+
+  /// Log capture instance. Access the underlying [LogBuffer] via
+  /// `Critic().logCapture.buffer` if you need to add custom entries.
+  final LogCapture logCapture = LogCapture();
 
   Future<App> _createAppData() async {
     final PackageInfo info = await PackageInfo.fromPlatform();
@@ -67,13 +73,19 @@ class Critic {
     );
   }
 
-  Future<bool> initialize(String apiToken, {String? baseUrl}) async {
+  Future<Zone> initialize(String apiToken, {String? baseUrl}) async {
     _apiToken = apiToken;
     if (baseUrl != null) {
       Api.setBaseUrl(baseUrl);
     } else {
       Api.resetBaseUrl();
     }
+
+    // Start log capture so print() and FlutterError output is buffered.
+    // The returned Zone must wrap the caller's app for print() interception.
+    // Use it directly: `zone.run(() => runApp(MyApp()))`, or use the
+    // convenience method [initializeAndRun] which does both in one call.
+    final zone = logCapture.install();
 
     App appData = await _createAppData();
     Device deviceData = await _createDeviceData();
@@ -84,7 +96,27 @@ class Critic {
       return Future<AppInstall>.error(false);
     });
     _appId = response.id;
-    return true;
+    return zone;
+  }
+
+  /// Initializes the SDK and runs [body] inside the log-capture zone so that
+  /// all `print()` calls are automatically captured.
+  ///
+  /// This is the recommended way to start Critic with full log capture:
+  ///
+  /// ```dart
+  /// void main() async {
+  ///   WidgetsFlutterBinding.ensureInitialized();
+  ///   await Critic().initializeAndRun('your-api-token', () => runApp(MyApp()));
+  /// }
+  /// ```
+  Future<void> initializeAndRun(
+    String apiToken,
+    void Function() body, {
+    String? baseUrl,
+  }) async {
+    final zone = await initialize(apiToken, baseUrl: baseUrl);
+    zone.run(body);
   }
 
   Future<BugReport> submitReport(BugReport report) async {
@@ -101,6 +133,6 @@ class Critic {
       apiToken: _apiToken!,
       report: report,
     );
-    return await Api.submitReport(requestData);
+    return await Api.submitReport(requestData, logBuffer: logCapture.buffer);
   }
 }

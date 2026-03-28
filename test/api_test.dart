@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:inventiv_critic_flutter/api.dart';
+import 'package:inventiv_critic_flutter/log_buffer.dart';
 import 'package:inventiv_critic_flutter/model/app.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:inventiv_critic_flutter/model/device.dart';
@@ -677,6 +678,165 @@ void main() {
       expect(capturedBody, contains('device_status[network_wifi_connected]'));
       expect(capturedBody, isNot(contains('device_status[disk_free]')));
       expect(capturedBody, isNot(contains('device_status[memory_free]')));
+    });
+  });
+
+  group('Api.submitReport with log buffer', () {
+    late BugReportRequest testReportRequest;
+
+    setUp(() {
+      Api.setDeviceStatusProvider(
+        () async => <String, String>{
+          'device_status[network_cell_connected]': 'false',
+          'device_status[network_wifi_connected]': 'true',
+        },
+      );
+      testReportRequest = BugReportRequest(
+        appInstall: AppInstall(id: 'install-uuid'),
+        apiToken: 'test-api-token',
+        report: BugReport.create(
+          description: 'Bug with logs',
+          stepsToReproduce: 'Step 1',
+          userIdentifier: 'user@test.com',
+        ),
+      );
+    });
+
+    test('attaches console_log.txt when logBuffer has entries', () async {
+      final logBuffer = LogBuffer();
+      logBuffer.add('Log line 1');
+      logBuffer.add('Log line 2');
+
+      String? capturedBody;
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        final bytes = await bodyStream.toBytes();
+        capturedBody = String.fromCharCodes(bytes);
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              json.encode({
+                'id': 'bug-uuid',
+                'description': 'Bug with logs',
+                'steps_to_reproduce': 'Step 1',
+                'user_identifier': 'user@test.com',
+                'created_at': null,
+                'updated_at': null,
+                'attachments': [],
+              }),
+            ),
+          ),
+          201,
+        );
+      });
+      Api.setHttpClient(mockClient);
+
+      await Api.submitReport(testReportRequest, logBuffer: logBuffer);
+
+      expect(capturedBody, contains('console_log.txt'));
+      expect(capturedBody, contains('Log line 1'));
+      expect(capturedBody, contains('Log line 2'));
+    });
+
+    test('does not attach log file when logBuffer is empty', () async {
+      final logBuffer = LogBuffer();
+
+      String? capturedBody;
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        final bytes = await bodyStream.toBytes();
+        capturedBody = String.fromCharCodes(bytes);
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              json.encode({
+                'id': 'bug-uuid',
+                'description': 'Bug with logs',
+                'steps_to_reproduce': 'Step 1',
+                'user_identifier': 'user@test.com',
+                'created_at': null,
+                'updated_at': null,
+                'attachments': [],
+              }),
+            ),
+          ),
+          201,
+        );
+      });
+      Api.setHttpClient(mockClient);
+
+      await Api.submitReport(testReportRequest, logBuffer: logBuffer);
+
+      expect(capturedBody, isNot(contains('console_log.txt')));
+    });
+
+    test('does not attach log file when logBuffer is null', () async {
+      String? capturedBody;
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        final bytes = await bodyStream.toBytes();
+        capturedBody = String.fromCharCodes(bytes);
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              json.encode({
+                'id': 'bug-uuid',
+                'description': 'Bug with logs',
+                'steps_to_reproduce': 'Step 1',
+                'user_identifier': 'user@test.com',
+                'created_at': null,
+                'updated_at': null,
+                'attachments': [],
+              }),
+            ),
+          ),
+          201,
+        );
+      });
+      Api.setHttpClient(mockClient);
+
+      await Api.submitReport(testReportRequest);
+
+      expect(capturedBody, isNot(contains('console_log.txt')));
+    });
+
+    test('report still submits when logBuffer is provided', () async {
+      final logBuffer = LogBuffer();
+      logBuffer.add('Some log');
+
+      final mockClient = MockClient.streaming((request, bodyStream) async {
+        await bodyStream.drain<void>();
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              json.encode({
+                'id': 'bug-uuid-with-logs',
+                'description': 'Bug with logs',
+                'steps_to_reproduce': 'Step 1',
+                'user_identifier': 'user@test.com',
+                'created_at': null,
+                'updated_at': null,
+                'attachments': [
+                  {
+                    'file_file_name': 'console_log.txt',
+                    'file_file_size': 100,
+                    'file_content_type': 'text/plain',
+                    'file_updated_at': null,
+                    'url': null,
+                  },
+                ],
+              }),
+            ),
+          ),
+          201,
+        );
+      });
+      Api.setHttpClient(mockClient);
+
+      final result = await Api.submitReport(
+        testReportRequest,
+        logBuffer: logBuffer,
+      );
+      expect(result.id, 'bug-uuid-with-logs');
+      expect(result.attachments, isNotEmpty);
+      expect(result.attachments!.first.name, 'console_log.txt');
     });
   });
 }
