@@ -6,6 +6,8 @@ import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:inventiv_critic_flutter/modal/bug_report.dart';
+import 'package:inventiv_critic_flutter/modal/device.dart';
+import 'package:inventiv_critic_flutter/modal/paginated_response.dart';
 import 'package:inventiv_critic_flutter/modal/ping_request_modal.dart';
 import 'package:inventiv_critic_flutter/modal/ping_response.dart';
 import 'package:inventiv_critic_flutter/modal/report_request_modal.dart';
@@ -126,5 +128,67 @@ class Api {
     });
 
     return completer.future;
+  }
+
+  static Future<PaginatedResponse<BugReport>> listBugReports(
+    String appApiToken, {
+    bool? archived,
+    String? deviceId,
+    String? since,
+  }) async {
+    final queryParams = <String, String>{'app_api_token': appApiToken};
+    if (archived == true) queryParams['archived'] = 'true';
+    if (deviceId != null) queryParams['device_id'] = deviceId;
+    if (since != null) queryParams['since'] = since;
+
+    final uri = Uri.parse(
+      '$_apiUrl/bug_reports',
+    ).replace(queryParameters: queryParams);
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      return PaginatedResponse.fromJson(
+        data,
+        'bug_reports',
+        BugReport.fromJson,
+      );
+    } else {
+      throw Exception(
+        'Response code: ${response.statusCode}, ${response.body}',
+      );
+    }
+  }
+
+  static Future<BugReport> getBugReport(String appApiToken, String id) async {
+    final uri = Uri.parse(
+      '$_apiUrl/bug_reports/${Uri.encodeComponent(id)}',
+    ).replace(queryParameters: {'app_api_token': appApiToken});
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      return BugReport.fromJson(
+        json.decode(response.body) as Map<String, dynamic>,
+      );
+    } else {
+      throw Exception(
+        'Response code: ${response.statusCode}, ${response.body}',
+      );
+    }
+  }
+
+  static Future<PaginatedResponse<Device>> listDevices(
+    String appApiToken,
+  ) async {
+    final uri = Uri.parse(
+      '$_apiUrl/devices',
+    ).replace(queryParameters: {'app_api_token': appApiToken});
+    final response = await http.get(uri);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      return PaginatedResponse.fromJson(data, 'devices', Device.fromJson);
+    } else {
+      throw Exception(
+        'Response code: ${response.statusCode}, ${response.body}',
+      );
+    }
   }
 }

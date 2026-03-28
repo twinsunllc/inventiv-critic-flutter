@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:inventiv_critic_flutter/api.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:inventiv_critic_flutter/api.dart';
 import 'package:inventiv_critic_flutter/modal/app.dart';
 import 'package:inventiv_critic_flutter/modal/bug_report.dart';
 import 'package:inventiv_critic_flutter/modal/device.dart';
+import 'package:inventiv_critic_flutter/modal/paginated_response.dart';
 import 'package:inventiv_critic_flutter/modal/ping_request_modal.dart';
 import 'package:inventiv_critic_flutter/modal/ping_response.dart';
 import 'package:inventiv_critic_flutter/modal/report_request_modal.dart';
@@ -102,5 +103,27 @@ class Critic {
       report: report,
     );
     return await Api.submitReport(requestData);
+  }
+
+  static Future<PaginatedResponse<BugReport>> listBugReports(
+    String appApiToken, {
+    bool? archived,
+    String? deviceId,
+    String? since,
+  }) {
+    return Api.listBugReports(
+      appApiToken,
+      archived: archived,
+      deviceId: deviceId,
+      since: since,
+    );
+  }
+
+  static Future<BugReport> getBugReport(String appApiToken, String id) {
+    return Api.getBugReport(appApiToken, id);
+  }
+
+  static Future<PaginatedResponse<Device>> listDevices(String appApiToken) {
+    return Api.listDevices(appApiToken);
   }
 }
