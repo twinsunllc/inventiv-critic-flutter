@@ -1,6 +1,6 @@
 # inventiv-critic-flutter
 
-This plugin allows Flutter apps to interact with the Inventiv Critic system for bug tracking and reporting. You will need to have a Critic account to properly utilize this. Please visit [the Critic website](https://critictracking.com/getting-started/) for more information.
+A Flutter client SDK for submitting bug reports to [Inventiv Critic](https://critictracking.com/getting-started/). This SDK is designed for embedding in end-user apps and supports only report submission — administrative endpoints (listing reports, fetching individual reports, listing devices) are not included and should be accessed through the Critic web portal or server-side API instead.
 
 ## How to use
 
