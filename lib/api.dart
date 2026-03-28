@@ -1,14 +1,13 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
-import 'package:inventiv_critic_flutter/modal/bug_report.dart';
-import 'package:inventiv_critic_flutter/modal/ping_request_modal.dart';
-import 'package:inventiv_critic_flutter/modal/ping_response.dart';
-import 'package:inventiv_critic_flutter/modal/report_request_modal.dart';
+import 'package:inventiv_critic_flutter/model/bug_report.dart';
+import 'package:inventiv_critic_flutter/model/ping_request.dart';
+import 'package:inventiv_critic_flutter/model/ping_response.dart';
+import 'package:inventiv_critic_flutter/model/report_request.dart';
 
 const String _defaultApiUrl = 'https://critic.inventiv.io/api/v3';
 
@@ -24,36 +23,31 @@ class Api {
   }
 
   static Future<AppInstall> ping(PingRequest pingRequest) async {
-    return await http
-        .post(
-          Uri.parse('$_apiUrl/ping'),
-          body: json.encode(pingRequest.toJson()),
-          headers: {HttpHeaders.contentTypeHeader: 'application/json'},
-        )
-        .then((response) {
-          if (response.statusCode == 200) {
-            return AppInstall.fromJson(json.decode(response.body));
-          } else {
-            throw Exception(
-              'Response code: ' +
-                  response.statusCode.toString() +
-                  ', ' +
-                  response.body,
-            );
-          }
-        });
+    final response = await http.post(
+      Uri.parse('$_apiUrl/ping'),
+      body: json.encode(pingRequest.toJson()),
+      headers: {HttpHeaders.contentTypeHeader: 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      return AppInstall.fromJson(json.decode(response.body));
+    } else {
+      throw Exception(
+        'Response code: ${response.statusCode}, ${response.body}',
+      );
+    }
   }
 
   static Future<Map<String, String>> deviceStatus() async {
-    var connectivity = await Connectivity().checkConnectivity();
+    final connectivityResults = await Connectivity().checkConnectivity();
 
     var battery = Battery();
 
     var returnVal = <String, String>{
       'device_status[network_cell_connected]':
-          (connectivity == ConnectivityResult.mobile).toString(),
+          connectivityResults.contains(ConnectivityResult.mobile).toString(),
       'device_status[network_wifi_connected]':
-          (connectivity == ConnectivityResult.wifi).toString(),
+          connectivityResults.contains(ConnectivityResult.wifi).toString(),
     };
 
     try {
@@ -105,26 +99,10 @@ class Api {
       );
     }
 
-    final Completer<BugReport> completer = Completer<BugReport>();
-
-    request.send().then((response) {
-      print('Response: ${response.statusCode}');
-      final contents = StringBuffer();
-      response.stream
-          .transform(utf8.decoder)
-          .listen(
-            (data) {
-              contents.write(data);
-            },
-            onDone: () {
-              print(contents.toString());
-              completer.complete(
-                BugReport.fromJson(json.decode(contents.toString())),
-              );
-            },
-          );
-    });
-
-    return completer.future;
+    final response = await request.send();
+    print('Response: ${response.statusCode}');
+    final body = await response.stream.bytesToString();
+    print(body);
+    return BugReport.fromJson(json.decode(body));
   }
 }

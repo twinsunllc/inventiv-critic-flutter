@@ -1,5 +1,5 @@
-import 'package:inventiv_critic_flutter/modal/app.dart';
-import 'package:inventiv_critic_flutter/modal/device.dart';
+import 'package:inventiv_critic_flutter/model/app.dart';
+import 'package:inventiv_critic_flutter/model/device.dart';
 
 class PingRequest {
   String apiToken;

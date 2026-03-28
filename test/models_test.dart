@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:inventiv_critic_flutter/modal/ping_response.dart';
-import 'package:inventiv_critic_flutter/modal/bug_report.dart';
-import 'package:inventiv_critic_flutter/modal/app.dart';
-import 'package:inventiv_critic_flutter/modal/device.dart';
+import 'package:inventiv_critic_flutter/model/ping_response.dart';
+import 'package:inventiv_critic_flutter/model/bug_report.dart';
+import 'package:inventiv_critic_flutter/model/app.dart';
+import 'package:inventiv_critic_flutter/model/device.dart';
 
 void main() {
   group('AppInstall', () {

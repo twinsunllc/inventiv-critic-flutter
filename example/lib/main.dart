@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:inventiv_critic_flutter/critic.dart';
-import 'package:inventiv_critic_flutter/modal/bug_report.dart';
+import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:path_provider/path_provider.dart';
 
 void main() => runApp(MyApp());
@@ -14,8 +14,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  TextEditingController _descriptionController = new TextEditingController(),
-      _reproduceController = new TextEditingController();
+  TextEditingController _descriptionController = TextEditingController(),
+      _reproduceController = TextEditingController();
 
   @override
   void initState() {
@@ -39,8 +39,8 @@ class _MyAppState extends State<MyApp> {
     }
 
     Critic().submitReport(report).then((BugReport successfulReport) {
-      ScaffoldMessenger.of(context).showSnackBar(new SnackBar(
-        content: new Text('Bug Report has been filed, check console'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Bug Report has been filed, check console'),
       ));
       print(
           'Successfully logged!\ndescription: ${successfulReport.description}\nsteps to reproduce: ${successfulReport.stepsToReproduce}');

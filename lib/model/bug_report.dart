@@ -1,6 +1,5 @@
-import 'package:flutter/foundation.dart';
-import 'package:inventiv_critic_flutter/modal/app.dart';
-import 'package:inventiv_critic_flutter/modal/device.dart';
+import 'package:inventiv_critic_flutter/model/app.dart';
+import 'package:inventiv_critic_flutter/model/device.dart';
 
 class BugReport {
   String? id,
@@ -28,8 +27,8 @@ class BugReport {
   });
 
   BugReport.create({
-    @required this.description,
-    @required this.stepsToReproduce,
+    required this.description,
+    required this.stepsToReproduce,
     this.userIdentifier = 'No user id provided',
   }) : assert(description != null),
        assert(stepsToReproduce != null),
@@ -102,7 +101,7 @@ class Attachment {
       return attachments;
     }
     for (final dynamic item in items) {
-      attachments.add(new Attachment.fromJson(item));
+      attachments.add(Attachment.fromJson(item));
     }
     return attachments;
   }
