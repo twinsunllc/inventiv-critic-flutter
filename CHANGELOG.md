@@ -10,6 +10,14 @@ First stable release with v3 API support, full test coverage, and modernized exa
 - `Attachment.fromJson` now reads `url` field (was `file_url` in v2)
 - `Critic.initialize()` accepts an optional `baseUrl` parameter for custom API endpoints
 
+### New Features
+- Add `LogCapture` class: intercepts `print()` calls via Dart `Zone` and captures `FlutterError.onError` for automatic inclusion in bug reports
+- Add `LogBuffer` ring buffer: fixed-capacity (default 500 entries) timestamped log store with bounded memory usage; oldest entries are evicted when full
+- Add disk space and memory info to device status included in bug reports
+
+### Bug Fixes
+- Fix `App.fromJson` null safety for `name` and `platform` fields (CRITIC-236)
+
 ### Code Quality
 - Rename `lib/modal/` to `lib/model/` (fix longstanding typo)
 - Add `lib/inventiv_critic_flutter.dart` barrel exports file for a single clean import path
@@ -19,6 +27,7 @@ First stable release with v3 API support, full test coverage, and modernized exa
 - Fix `Connectivity().checkConnectivity()` to handle `List<ConnectivityResult>` return type
 - Add injectable HTTP client and device status provider for testability
 - Add proper error handling for `submitReport` non-success responses
+- Standardize log attachment filename to `console-logs.txt`
 
 ### Tests
 - Add unit tests for model serialization (UUID string handling, int→String migration)
