@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to release (e.g. v1.0.0)"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  test:
+    name: Flutter Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart analyze --fatal-warnings
+      - name: Run tests
+        run: |
+          if [ -d "test" ]; then
+            flutter test
+          else
+            echo "No test directory found — skipping tests"
+          fi
+
+  release:
+    name: Create GitHub Release
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Extract the section for the current version from CHANGELOG.md
+          # Grab everything between "## <version>" and the next "## " heading
+          NOTES=$(awk "/^## ${VERSION}$/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="See CHANGELOG.md for release notes."
+          fi
+          # Write to a file to avoid quoting issues with multiline strings
+          echo "$NOTES" > /tmp/release-notes.md
+          cat /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          release_name: ${{ steps.version.outputs.tag }}
+          body_path: /tmp/release-notes.md
+          draft: false
+          prerelease: false
+
+  publish:
+    name: Publish to pub.dev
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
+        with:
+          channel: stable
+      - run: flutter pub get
+
+      - name: Publish to pub.dev
+        run: flutter pub publish --force
+        env:
+          # Set PUB_DEV_CREDENTIALS to a JSON credentials file obtained from
+          # `dart pub token add https://pub.dev` on a machine authenticated
+          # with a verified pub.dev publisher account. Store the JSON content
+          # as the PUB_DEV_CREDENTIALS repository secret.
+          PUB_CREDENTIALS: ${{ secrets.PUB_DEV_CREDENTIALS }}
