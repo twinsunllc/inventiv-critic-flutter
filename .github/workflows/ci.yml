@@ -52,7 +52,7 @@ jobs:
 
   package-age-check:
     name: Pub.dev Package Age Check
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
@@ -68,28 +68,23 @@ jobs:
           NOW=$(date +%s)
           FAILED=0
 
-          # Load allowlisted packages (one per line, "pkg@version" or just "pkg")
-          # from .pubdev-quarantine-allowlist if it exists.
-          ALLOWLIST_FILE=".pubdev-quarantine-allowlist"
-          ALLOWLIST=()
-          if [ -f "$ALLOWLIST_FILE" ]; then
-            while IFS= read -r line || [ -n "$line" ]; do
-              # Strip comments and blank lines
-              line="${line%%#*}"
-              line="${line//[$'\t' ]}"
-              [ -z "$line" ] && continue
-              ALLOWLIST+=("$line")
-            done < "$ALLOWLIST_FILE"
-          fi
-
+          # --- Load quarantine allowlist ---
+          ALLOWLIST_FILE=".github/quarantine-allowlist.yml"
           is_allowlisted() {
             local pkg="$1" ver="$2"
-            for entry in "${ALLOWLIST[@]+"${ALLOWLIST[@]}"}"; do
-              if [ "$entry" = "$pkg@$ver" ] || [ "$entry" = "$pkg" ]; then
-                return 0
-              fi
-            done
-            return 1
+            if [ ! -f "$ALLOWLIST_FILE" ]; then return 1; fi
+            python3 -c "
+          import yaml, sys, datetime
+          with open('$ALLOWLIST_FILE') as f:
+              data = yaml.safe_load(f) or {}
+          for entry in data.get('packages', []):
+              exp = entry.get('expires') or ''
+              if isinstance(exp, datetime.date):
+                  exp = exp.isoformat()
+              if entry.get('name') == sys.argv[1] and entry.get('version') == sys.argv[2] and exp >= datetime.date.today().isoformat():
+                  sys.exit(0)
+          sys.exit(1)
+          " "$pkg" "$ver" 2>/dev/null
           }
 
           # Extract resolved package names and versions from pubspec.lock
@@ -104,7 +99,7 @@ jobs:
             VER=$(echo "$ENTRY" | cut -d: -f2)
 
             if is_allowlisted "$PKG" "$VER"; then
-              echo "  ✓ ALLOWLISTED: $PKG@$VER (skipping age check)"
+              echo "  ⊘ ALLOWLISTED: $PKG@$VER (skipping age check)"
               continue
             fi
 
@@ -142,7 +137,7 @@ jobs:
           if [ "$FAILED" -eq 1 ]; then
             echo ""
             echo "::error::One or more dependencies were published within the last $QUARANTINE_DAYS days. See above for details."
-            echo "::error::To allowlist a known-good package, add it to $ALLOWLIST_FILE (format: pkg@version or pkg)."
+            echo "::error::To allowlist a known-good package, add it to .github/quarantine-allowlist.yml."
             exit 1
           fi
 
