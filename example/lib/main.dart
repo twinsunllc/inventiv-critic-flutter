@@ -5,7 +5,41 @@ import 'package:inventiv_critic_flutter/critic.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
 import 'package:path_provider/path_provider.dart';
 
-void main() => runApp(const CriticExampleApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Critic().initializeAndRun(
+      'YOUR_API_TOKEN_HERE',
+      () => runApp(const CriticExampleApp()),
+    );
+  } catch (e) {
+    runApp(CriticErrorApp(message: e.toString()));
+  }
+}
+
+class CriticErrorApp extends StatelessWidget {
+  final String message;
+
+  const CriticErrorApp({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Critic Example',
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Initialization failed: $message',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class CriticExampleApp extends StatelessWidget {
   const CriticExampleApp({super.key});
@@ -32,40 +66,9 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
   final _stepsController = TextEditingController();
   final _userIdController = TextEditingController();
 
-  bool _initialized = false;
-  bool _initializing = false;
   bool _submitting = false;
-  String? _statusMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeCritic();
-  }
-
-  Future<void> _initializeCritic() async {
-    setState(() => _initializing = true);
-    try {
-      await Critic().initialize('YOUR_API_TOKEN_HERE');
-      setState(() {
-        _initialized = true;
-        _statusMessage = 'Critic initialized successfully';
-      });
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Initialization failed: $e';
-      });
-    } finally {
-      setState(() => _initializing = false);
-    }
-  }
 
   Future<void> _submitReport({bool withAttachment = false}) async {
-    if (!_initialized) {
-      _showSnackBar('Critic not initialized yet');
-      return;
-    }
-
     if (_descriptionController.text.isEmpty) {
       _showSnackBar('Please enter a description');
       return;
@@ -131,36 +134,6 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(
-                      _initialized
-                          ? Icons.check_circle
-                          : _initializing
-                          ? Icons.hourglass_top
-                          : Icons.error,
-                      color:
-                          _initialized
-                              ? Colors.green
-                              : _initializing
-                              ? Colors.orange
-                              : Colors.red,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _statusMessage ?? 'Connecting to Critic...',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             Text(
               'Submit a Bug Report',
               style: Theme.of(context).textTheme.headlineSmall,
@@ -196,8 +169,7 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed:
-                  _submitting || !_initialized ? null : () => _submitReport(),
+              onPressed: _submitting ? null : () => _submitReport(),
               icon:
                   _submitting
                       ? const SizedBox(
@@ -211,7 +183,7 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
             const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed:
-                  _submitting || !_initialized
+                  _submitting
                       ? null
                       : () => _submitReport(withAttachment: true),
               icon: const Icon(Icons.attach_file),

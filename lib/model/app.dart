@@ -27,10 +27,13 @@ class App {
 
   factory App.fromJson(Map<String, dynamic> json) {
     return App(
-      name: json['name'],
-      package: json['package'],
-      platform: json['platform'],
-      version: _Version.fromJson(json['version']),
+      name: json['name'] ?? '',
+      package: json['package'] ?? '',
+      platform: json['platform'] ?? '',
+      version:
+          json['version'] != null
+              ? _Version.fromJson(json['version'])
+              : _Version(code: '', name: ''),
     );
   }
 

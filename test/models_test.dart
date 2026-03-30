@@ -227,5 +227,93 @@ void main() {
       expect(app.version.code, '10');
       expect(app.version.name, '2.1.0');
     });
+
+    test(
+      'fromJson uses empty string when package is null (v3 ping response)',
+      () {
+        final json = {
+          'name': 'MyApp',
+          'package': null,
+          'platform': 'Android',
+          'version': {'code': '5', 'name': '1.0.0'},
+        };
+
+        final app = App.fromJson(json);
+        expect(app.package, '');
+      },
+    );
+
+    test(
+      'fromJson uses empty _Version when version is null (v3 ping response)',
+      () {
+        final json = {
+          'name': 'MyApp',
+          'package': 'com.example.myapp',
+          'platform': 'Android',
+          'version': null,
+        };
+
+        final app = App.fromJson(json);
+        expect(app.version.code, '');
+        expect(app.version.name, '');
+      },
+    );
+
+    test('fromJson handles both package and version null without crashing', () {
+      final json = {
+        'name': 'MyApp',
+        'package': null,
+        'platform': 'Android',
+        'version': null,
+      };
+
+      final app = App.fromJson(json);
+      expect(app.package, '');
+      expect(app.version.code, '');
+      expect(app.version.name, '');
+    });
+
+    test('fromJson uses empty string when name is null (v3 ping response)', () {
+      final json = {
+        'name': null,
+        'package': 'com.example.myapp',
+        'platform': 'Android',
+        'version': {'code': '1', 'name': '1.0.0'},
+      };
+
+      final app = App.fromJson(json);
+      expect(app.name, '');
+    });
+
+    test(
+      'fromJson uses empty string when platform is null (v3 ping response)',
+      () {
+        final json = {
+          'name': 'MyApp',
+          'package': 'com.example.myapp',
+          'platform': null,
+          'version': {'code': '1', 'name': '1.0.0'},
+        };
+
+        final app = App.fromJson(json);
+        expect(app.platform, '');
+      },
+    );
+
+    test('fromJson handles all four fields null without crashing', () {
+      final json = {
+        'name': null,
+        'package': null,
+        'platform': null,
+        'version': null,
+      };
+
+      final app = App.fromJson(json);
+      expect(app.name, '');
+      expect(app.package, '');
+      expect(app.platform, '');
+      expect(app.version.code, '');
+      expect(app.version.name, '');
+    });
   });
 }
