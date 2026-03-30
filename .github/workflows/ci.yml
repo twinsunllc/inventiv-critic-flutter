@@ -1,4 +1,4 @@
-name: CI
+name: Nightly Security
 
 on:
   push:
@@ -68,6 +68,30 @@ jobs:
           NOW=$(date +%s)
           FAILED=0
 
+          # Load allowlisted packages (one per line, "pkg@version" or just "pkg")
+          # from .pubdev-quarantine-allowlist if it exists.
+          ALLOWLIST_FILE=".pubdev-quarantine-allowlist"
+          ALLOWLIST=()
+          if [ -f "$ALLOWLIST_FILE" ]; then
+            while IFS= read -r line || [ -n "$line" ]; do
+              # Strip comments and blank lines
+              line="${line%%#*}"
+              line="${line//[$'\t' ]}"
+              [ -z "$line" ] && continue
+              ALLOWLIST+=("$line")
+            done < "$ALLOWLIST_FILE"
+          fi
+
+          is_allowlisted() {
+            local pkg="$1" ver="$2"
+            for entry in "${ALLOWLIST[@]+"${ALLOWLIST[@]}"}"; do
+              if [ "$entry" = "$pkg@$ver" ] || [ "$entry" = "$pkg" ]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
           # Extract resolved package names and versions from pubspec.lock
           # pubspec.lock YAML format: "  <pkg>:\n    ...\n    version: \"<ver>\""
           DEPS=$(awk '
@@ -78,6 +102,12 @@ jobs:
           for ENTRY in $DEPS; do
             PKG=$(echo "$ENTRY" | cut -d: -f1)
             VER=$(echo "$ENTRY" | cut -d: -f2)
+
+            if is_allowlisted "$PKG" "$VER"; then
+              echo "  ✓ ALLOWLISTED: $PKG@$VER (skipping age check)"
+              continue
+            fi
+
             echo "Checking $PKG@$VER..."
 
             RESPONSE=$(curl -sf "https://pub.dev/api/packages/$PKG" 2>/dev/null || true)
@@ -112,6 +142,7 @@ jobs:
           if [ "$FAILED" -eq 1 ]; then
             echo ""
             echo "::error::One or more dependencies were published within the last $QUARANTINE_DAYS days. See above for details."
+            echo "::error::To allowlist a known-good package, add it to $ALLOWLIST_FILE (format: pkg@version or pkg)."
             exit 1
           fi
 
@@ -129,6 +160,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           allowlist: |
+            actions
+            subosito
             twinsunllc
       - name: Upload audit report
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
