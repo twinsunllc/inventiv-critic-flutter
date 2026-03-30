@@ -1,0 +1,42 @@
+# Quarantine Allowlist
+#
+# Packages listed here bypass the 7-day quarantine age check.
+# Each entry MUST include a reason and an expiration date.
+# Expired entries are ignored (treated as if not listed).
+# Review and remove entries regularly.
+#
+# Format:
+#   packages:
+#     - name: "package-name"       # Package name as it appears in the lockfile
+#       version: "1.2.3"           # Exact version being allowlisted
+#       reason: "Why this is OK"   # Brief explanation
+#       expires: "2026-04-15"      # ISO date; entry ignored after this date
+#
+# Example:
+#   packages:
+#     - name: "dio"
+#       version: "5.4.0"
+#       reason: "Major bump to fix connection pooling issue"
+#       expires: "2026-04-15"
+
+packages:
+  - name: "async"
+    version: "2.13.1"
+    reason: "Dart SDK core package update, published by verified publisher (dart.dev)"
+    expires: "2026-04-13"
+  - name: "connectivity_plus"
+    version: "7.1.0"
+    reason: "FlutterCommunity plus_plugins coordinated release, verified publisher"
+    expires: "2026-04-13"
+  - name: "connectivity_plus_platform_interface"
+    version: "2.1.0"
+    reason: "FlutterCommunity plus_plugins coordinated release, verified publisher"
+    expires: "2026-04-13"
+  - name: "device_info_plus"
+    version: "12.4.0"
+    reason: "FlutterCommunity plus_plugins coordinated release, verified publisher"
+    expires: "2026-04-13"
+  - name: "package_info_plus"
+    version: "9.0.1"
+    reason: "FlutterCommunity plus_plugins coordinated release, verified publisher"
+    expires: "2026-04-13"
