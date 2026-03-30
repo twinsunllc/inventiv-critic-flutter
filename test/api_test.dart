@@ -702,7 +702,7 @@ void main() {
       );
     });
 
-    test('attaches console_log.txt when logBuffer has entries', () async {
+    test('attaches console-logs.txt when logBuffer has entries', () async {
       final logBuffer = LogBuffer();
       logBuffer.add('Log line 1');
       logBuffer.add('Log line 2');
@@ -732,7 +732,7 @@ void main() {
 
       await Api.submitReport(testReportRequest, logBuffer: logBuffer);
 
-      expect(capturedBody, contains('console_log.txt'));
+      expect(capturedBody, contains('console-logs.txt'));
       expect(capturedBody, contains('Log line 1'));
       expect(capturedBody, contains('Log line 2'));
     });
@@ -765,7 +765,7 @@ void main() {
 
       await Api.submitReport(testReportRequest, logBuffer: logBuffer);
 
-      expect(capturedBody, isNot(contains('console_log.txt')));
+      expect(capturedBody, isNot(contains('console-logs.txt')));
     });
 
     test('does not attach log file when logBuffer is null', () async {
@@ -794,7 +794,7 @@ void main() {
 
       await Api.submitReport(testReportRequest);
 
-      expect(capturedBody, isNot(contains('console_log.txt')));
+      expect(capturedBody, isNot(contains('console-logs.txt')));
     });
 
     test('report still submits when logBuffer is provided', () async {

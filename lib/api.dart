@@ -164,7 +164,7 @@ class Api {
           http.MultipartFile.fromString(
             'bug_report[attachments][]',
             logContent,
-            filename: 'console_log.txt',
+            filename: 'console-logs.txt',
           ),
         );
       } catch (e) {
