@@ -7,10 +7,38 @@ import 'package:path_provider/path_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Critic().initializeAndRun(
-    'YOUR_API_TOKEN_HERE',
-    () => runApp(const CriticExampleApp()),
-  );
+  try {
+    await Critic().initializeAndRun(
+      'YOUR_API_TOKEN_HERE',
+      () => runApp(const CriticExampleApp()),
+    );
+  } catch (e) {
+    runApp(CriticErrorApp(message: e.toString()));
+  }
+}
+
+class CriticErrorApp extends StatelessWidget {
+  final String message;
+
+  const CriticErrorApp({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Critic Example',
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Initialization failed: $message',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class CriticExampleApp extends StatelessWidget {

@@ -27,9 +27,9 @@ class App {
 
   factory App.fromJson(Map<String, dynamic> json) {
     return App(
-      name: json['name'],
+      name: json['name'] ?? '',
       package: json['package'] ?? '',
-      platform: json['platform'],
+      platform: json['platform'] ?? '',
       version:
           json['version'] != null
               ? _Version.fromJson(json['version'])
