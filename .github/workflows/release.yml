@@ -57,9 +57,11 @@ jobs:
         id: changelog
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          # Escape dots so awk treats them as literal characters, not regex wildcards
+          ESCAPED_VERSION=$(echo "$VERSION" | sed 's/\./\\./g')
           # Extract the section for the current version from CHANGELOG.md
           # Grab everything between "## <version>" and the next "## " heading
-          NOTES=$(awk "/^## ${VERSION}$/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
+          NOTES=$(awk "/^## ${ESCAPED_VERSION}$/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
           if [ -z "$NOTES" ]; then
             NOTES="See CHANGELOG.md for release notes."
           fi
@@ -68,15 +70,11 @@ jobs:
           cat /tmp/release-notes.md
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191  # v2.x
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          release_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
           body_path: /tmp/release-notes.md
-          draft: false
-          prerelease: false
 
   publish:
     name: Publish to pub.dev
@@ -89,11 +87,9 @@ jobs:
           channel: stable
       - run: flutter pub get
 
+      - name: Configure pub.dev credentials
+        run: |
+          mkdir -p ~/.pub-cache
+          echo '${{ secrets.PUB_DEV_CREDENTIALS }}' > ~/.pub-cache/credentials.json
       - name: Publish to pub.dev
         run: flutter pub publish --force
-        env:
-          # Set PUB_DEV_CREDENTIALS to a JSON credentials file obtained from
-          # `dart pub token add https://pub.dev` on a machine authenticated
-          # with a verified pub.dev publisher account. Store the JSON content
-          # as the PUB_DEV_CREDENTIALS repository secret.
-          PUB_CREDENTIALS: ${{ secrets.PUB_DEV_CREDENTIALS }}
