@@ -156,6 +156,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           allowlist: |
             actions
+            dart-lang
+            softprops
             subosito
             twinsunllc
       - name: Upload audit report
