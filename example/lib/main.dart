@@ -3,16 +3,39 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:inventiv_critic_flutter/critic.dart';
 import 'package:inventiv_critic_flutter/model/bug_report.dart';
+import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
+
+/// Wire [package:logging] into Critic so every log record appears in the
+/// console-logs.txt attachment submitted with bug reports.
+///
+/// Note: [package:logging] is a dev dependency of this *example*; it is
+/// intentionally NOT a dependency of the inventiv_critic_flutter SDK itself.
+void _setupLogging() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    Critic.instance.captureLog(
+      record.message,
+      level: record.level.name,
+      tag: record.loggerName,
+      timestamp: record.time,
+    );
+  });
+}
+
+final _log = Logger('CriticExample');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _setupLogging();
   try {
     await Critic().initializeAndRun(
       'YOUR_API_TOKEN_HERE',
       () => runApp(const CriticExampleApp()),
     );
+    _log.info('Critic initialized successfully');
   } catch (e) {
+    _log.severe('Critic initialization failed: $e');
     runApp(CriticErrorApp(message: e.toString()));
   }
 }
@@ -98,12 +121,15 @@ class _CriticExamplePageState extends State<CriticExamplePage> {
     }
 
     try {
+      _log.info('Submitting bug report…');
       final result = await Critic().submitReport(report);
+      _log.info('Bug report submitted (ID: ${result.id})');
       _showSnackBar('Bug report submitted (ID: ${result.id})');
       _descriptionController.clear();
       _stepsController.clear();
       _userIdController.clear();
     } catch (e) {
+      _log.warning('Bug report submission failed: $e');
       _showSnackBar('Submission failed: $e');
     } finally {
       setState(() => _submitting = false);

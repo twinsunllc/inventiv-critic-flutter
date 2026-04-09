@@ -19,15 +19,23 @@ class LogBuffer {
   /// Whether the buffer contains no entries.
   bool get isEmpty => _entries.isEmpty;
 
-  /// Add a log [message] with an optional [timestamp].
+  /// Add a log [message] with optional [level], [tag], and [timestamp].
+  ///
+  /// [level] is a free-form severity label (e.g. `"info"`, `"warning"`).
+  /// [tag] is a free-form category or logger name (e.g. `"MyService"`).
   ///
   /// If the buffer is at capacity the oldest entry is evicted.
-  void add(String message, {DateTime? timestamp}) {
+  void add(String message, {String? level, String? tag, DateTime? timestamp}) {
     if (_entries.length >= capacity) {
       _entries.removeFirst();
     }
     _entries.addLast(
-      LogEntry(message: message, timestamp: timestamp ?? DateTime.now()),
+      LogEntry(
+        message: message,
+        level: level,
+        tag: tag,
+        timestamp: timestamp ?? DateTime.now(),
+      ),
     );
   }
 
@@ -36,10 +44,28 @@ class LogBuffer {
 
   /// Formats the entire buffer as a single string suitable for writing to a
   /// text file attachment.
+  ///
+  /// Each line has the format:
+  /// `{timestamp}  [{level}] {tag}: {message}` when level/tag are present,
+  /// or `{timestamp}  {message}` for entries without metadata.
   String export() {
     final buf = StringBuffer();
     for (final entry in _entries) {
-      buf.writeln('${entry.timestamp.toIso8601String()}  ${entry.message}');
+      final prefix = StringBuffer();
+      if (entry.level != null) {
+        prefix.write('[${entry.level}]');
+      }
+      if (entry.tag != null) {
+        if (prefix.isNotEmpty) prefix.write(' ');
+        prefix.write('${entry.tag}:');
+      }
+      if (prefix.isNotEmpty) {
+        buf.writeln(
+          '${entry.timestamp.toIso8601String()}  $prefix ${entry.message}',
+        );
+      } else {
+        buf.writeln('${entry.timestamp.toIso8601String()}  ${entry.message}');
+      }
     }
     return buf.toString();
   }
@@ -51,7 +77,14 @@ class LogBuffer {
 /// A single timestamped log entry.
 class LogEntry {
   final String message;
+  final String? level;
+  final String? tag;
   final DateTime timestamp;
 
-  const LogEntry({required this.message, required this.timestamp});
+  const LogEntry({
+    required this.message,
+    this.level,
+    this.tag,
+    required this.timestamp,
+  });
 }

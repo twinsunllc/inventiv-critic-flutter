@@ -76,9 +76,73 @@ report.attachments = [
 await Critic().submitReport(report);
 ```
 
+## Capturing logs from third-party loggers
+
+The SDK exposes `Critic.instance.captureLog()` so you can forward messages from
+any logging package directly into the `console-logs.txt` attachment. The SDK
+itself has **no dependency** on any logging library — you wire it in your own
+app code.
+
+```dart
+void captureLog(
+  String message, {
+  String? level,     // e.g. "info", "warning", "severe"
+  String? tag,       // e.g. logger name or subsystem
+  DateTime? timestamp,
+})
+```
+
+### package:logging
+
+```dart
+Logger.root.level = Level.ALL;
+Logger.root.onRecord.listen((record) {
+  Critic.instance.captureLog(
+    record.message,
+    level: record.level.name,
+    tag: record.loggerName,
+    timestamp: record.time,
+  );
+});
+```
+
+### package:logger
+
+Write a small `LogOutput` subclass that forwards to `captureLog`:
+
+```dart
+class CriticLogOutput extends LogOutput {
+  @override
+  void output(OutputEvent event) {
+    for (final line in event.lines) {
+      Critic.instance.captureLog(line, level: event.level.name);
+    }
+  }
+}
+
+// Then pass it to your Logger:
+final logger = Logger(output: CriticLogOutput());
+```
+
+### dart:developer log()
+
+Calls to `dart:developer`'s `log()` bypass the Dart Zone mechanism and go
+directly to the VM service, so they cannot be intercepted automatically.
+Forward them explicitly:
+
+```dart
+import 'dart:developer' as dev;
+
+void myLog(String message, {String? name}) {
+  dev.log(message, name: name ?? '');
+  Critic.instance.captureLog(message, tag: name);
+}
+```
+
 ## Example
 
-See the [example app](example/) for a complete working demo with Material 3 UI.
+See the [example app](example/) for a complete working demo with Material 3 UI,
+including a `package:logging` wiring example.
 
 ## License
 
