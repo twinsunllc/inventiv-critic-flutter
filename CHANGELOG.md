@@ -1,3 +1,9 @@
+## 1.0.1
+
+### New Features
+
+- Add public `Critic.captureLog()` API for feeding arbitrary log lines from third-party logging packages (`package:logging`, `package:logger`, `dart:developer`, etc.) into the same buffer that backs the `print()` zone interceptor. No new hard dependencies — integrators wire their logger of choice in their own app code. Level, tag, and timestamp metadata are preserved on each captured entry. See README for wiring examples with `package:logging` and `package:logger`. (CRITIC-268)
+
 ## 1.0.0
 
 First stable release with v3 API support, full test coverage, and modernized example app.
