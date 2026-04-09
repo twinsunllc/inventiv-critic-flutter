@@ -22,6 +22,11 @@ class Critic {
     return _singleton;
   }
 
+  /// Returns the singleton [Critic] instance.
+  ///
+  /// Equivalent to calling `Critic()`.
+  static Critic get instance => _singleton;
+
   String? _apiToken;
   String? _appId;
 
@@ -117,6 +122,44 @@ class Critic {
   }) async {
     final zone = await initialize(apiToken, baseUrl: baseUrl);
     zone.run(body);
+  }
+
+  /// Writes a log entry directly into the SDK's log buffer.
+  ///
+  /// Use this to forward messages from third-party loggers (such as
+  /// `package:logging`, `package:logger`, or `package:talker`) so they appear
+  /// in the `console-logs.txt` attachment alongside `print()` output and
+  /// Flutter framework errors.
+  ///
+  /// - [message]: the log message text.
+  /// - [level]: optional severity label (e.g. `"info"`, `"warning"`,
+  ///   `"severe"`). Pass the value your logging library already produces.
+  /// - [tag]: optional category or logger name (e.g. `"AuthService"`).
+  /// - [timestamp]: optional point-in-time for the entry. Defaults to now.
+  ///
+  /// Example — wiring `package:logging`:
+  /// ```dart
+  /// Logger.root.onRecord.listen((record) {
+  ///   Critic.instance.captureLog(
+  ///     record.message,
+  ///     level: record.level.name,
+  ///     tag: record.loggerName,
+  ///     timestamp: record.time,
+  ///   );
+  /// });
+  /// ```
+  void captureLog(
+    String message, {
+    String? level,
+    String? tag,
+    DateTime? timestamp,
+  }) {
+    logCapture.buffer.add(
+      message,
+      level: level,
+      tag: tag,
+      timestamp: timestamp,
+    );
   }
 
   Future<BugReport> submitReport(BugReport report) async {

@@ -99,5 +99,85 @@ void main() {
         throwsA(isA<UnsupportedError>()),
       );
     });
+
+    test('add() stores level on entry', () {
+      final buffer = LogBuffer();
+      buffer.add('msg', level: 'warning');
+      expect(buffer.entries.first.level, 'warning');
+    });
+
+    test('add() stores tag on entry', () {
+      final buffer = LogBuffer();
+      buffer.add('msg', tag: 'MyService');
+      expect(buffer.entries.first.tag, 'MyService');
+    });
+
+    test('add() stores both level and tag', () {
+      final buffer = LogBuffer();
+      buffer.add('hello', level: 'info', tag: 'AuthService');
+      final entry = buffer.entries.first;
+      expect(entry.level, 'info');
+      expect(entry.tag, 'AuthService');
+      expect(entry.message, 'hello');
+    });
+
+    test('level and tag default to null when not provided', () {
+      final buffer = LogBuffer();
+      buffer.add('plain');
+      final entry = buffer.entries.first;
+      expect(entry.level, isNull);
+      expect(entry.tag, isNull);
+    });
+
+    test('export() includes level and tag in formatted output', () {
+      final buffer = LogBuffer();
+      final ts = DateTime(2026, 1, 15, 12, 0, 0);
+      buffer.add('login attempt', level: 'info', tag: 'Auth', timestamp: ts);
+      final output = buffer.export();
+      expect(output, contains('[info]'));
+      expect(output, contains('Auth:'));
+      expect(output, contains('login attempt'));
+    });
+
+    test('export() includes only level when tag is absent', () {
+      final buffer = LogBuffer();
+      final ts = DateTime(2026, 1, 15, 12, 0, 0);
+      buffer.add('something', level: 'severe', timestamp: ts);
+      final output = buffer.export();
+      expect(output, contains('[severe]'));
+      expect(output, contains('something'));
+    });
+
+    test('export() includes only tag when level is absent', () {
+      final buffer = LogBuffer();
+      final ts = DateTime(2026, 1, 15, 12, 0, 0);
+      buffer.add('tagged msg', tag: 'Network', timestamp: ts);
+      final output = buffer.export();
+      expect(output, contains('Network:'));
+      expect(output, contains('tagged msg'));
+    });
+
+    test('export() plain entries (no level/tag) use original format', () {
+      final buffer = LogBuffer();
+      final ts = DateTime(2026, 3, 28, 10, 30, 0);
+      buffer.add('plain line', timestamp: ts);
+      final output = buffer.export();
+      expect(output, contains('2026-03-28'));
+      expect(output, contains('plain line'));
+      expect(output, isNot(contains('[')));
+    });
+
+    test('export() mixes plain and metadata entries', () {
+      final buffer = LogBuffer();
+      final ts = DateTime(2026, 1, 15, 12, 0, 0);
+      buffer.add('print output', timestamp: ts);
+      buffer.add('logger output', level: 'debug', tag: 'App', timestamp: ts);
+      final output = buffer.export();
+      final lines = output.trim().split('\n');
+      expect(lines.length, 2);
+      expect(lines[0], isNot(contains('[')));
+      expect(lines[1], contains('[debug]'));
+      expect(lines[1], contains('App:'));
+    });
   });
 }
