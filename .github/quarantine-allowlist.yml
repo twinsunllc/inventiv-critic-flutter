@@ -40,3 +40,7 @@ packages:
     version: "9.0.1"
     reason: "FlutterCommunity plus_plugins coordinated release, verified publisher"
     expires: "2026-04-13"
+  - name: "mocktail"
+    version: "1.0.5"
+    reason: "Patch release by verified publisher felangel; dev-only test mock library with no production impact"
+    expires: "2026-04-17"
