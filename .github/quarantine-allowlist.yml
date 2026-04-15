@@ -44,3 +44,7 @@ packages:
     version: "1.0.5"
     reason: "Patch release by verified publisher felangel; dev-only test mock library with no production impact"
     expires: "2026-04-17"
+  - name: "vm_service"
+    version: "15.1.0"
+    reason: "Dart SDK tooling transitive dependency update published by verified publisher (dart.dev); no production impact as it is a dev/test tooling package"
+    expires: "2026-04-22"
