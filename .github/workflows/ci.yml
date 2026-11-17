@@ -21,7 +21,7 @@ jobs:
   analyze:
     name: Dart Analyze
     if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: [runs-on,runner=2cpu-linux-x64,image=ubuntu24-full-x64,"run-id=${{ github.run_id }}"]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
@@ -33,7 +33,7 @@ jobs:
   test:
     name: Flutter Test
     if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: [runs-on,runner=2cpu-linux-x64,image=ubuntu24-full-x64,"run-id=${{ github.run_id }}"]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
@@ -53,7 +53,7 @@ jobs:
   package-age-check:
     name: Pub.dev Package Age Check
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: [runs-on,runner=2cpu-linux-x64,image=ubuntu24-full-x64,"run-id=${{ github.run_id }}"]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       - uses: subosito/flutter-action@e938fdf56512cc96ef2f93601a5a40bde3801046  # v2.19.0
@@ -147,11 +147,11 @@ jobs:
   actions-security:
     name: GitHub Actions Security Check
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: [runs-on,runner=2cpu-linux-x64,image=ubuntu24-full-x64,"run-id=${{ github.run_id }}"]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       - name: Run GitHub Actions security audit
-        uses: twinsunllc/github-actions-security-checker@3431967fb16dd3d0e96fcf823ba33609c2df31ee  # v1.4.1
+        uses: twinsunllc/github-actions-security-checker@ec20bb8f2e3a8e1d6553c564586aeac84edd0f17 # v1.5.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           allowlist: |
